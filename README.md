@@ -3,7 +3,7 @@
 這是一個簡單易用的售價與抽成計算工具，幫助你快速計算平台抽成後的實際收入，或反向推算應該設定的售價。
 
 👉 線上使用頁面：  
-[https://your-username.github.io/smart-seller-pricing/](https://your-username.github.io/smart-seller-pricing/)
+[https://ethan0417.github.io/smart-seller-pricing/](https://ethan0417.github.io/smart-seller-pricing/)
 
 ---
 
