@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>售價與平台抽成計算器 v2</title>
+  <title>Smart Seller Pricing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root {
@@ -31,11 +31,12 @@
 
     .container {
       max-width: 600px;
-      margin: 50px auto;
+      margin: 60px auto;
       background: var(--card-light);
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
       transition: background 0.3s;
     }
 
@@ -46,25 +47,57 @@
     h2 {
       text-align: center;
       color: var(--primary);
+      margin-bottom: 30px;
+    }
+
+    .mode-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+      background: var(--card-light);
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      color: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mode-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    body.dark .mode-toggle {
+      background: var(--card-dark);
+      border-color: var(--primary);
+      color: var(--primary);
     }
 
     label {
       font-weight: bold;
-      margin-top: 15px;
       display: block;
+      margin-top: 20px;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 10px;
-      margin-top: 5px;
+      margin-top: 8px;
+      font-size: 16px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 16px;
     }
 
     button {
-      margin-top: 20px;
+      margin-top: 30px;
       width: 100%;
       padding: 12px;
       background-color: var(--primary);
@@ -91,45 +124,67 @@
       color: #888;
     }
 
-    .toggle-theme {
-      position: absolute;
-      top: 15px;
-      right: 20px;
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: var(--primary);
+    .input-block {
+      display: none;
+      margin-top: 15px;
+    }
+
+    .visible {
+      display: block;
     }
   </style>
 </head>
 <body>
-  <button class="toggle-theme" onclick="toggleTheme()">🌙</button>
 
   <div class="container">
-    <h2>售價與平台抽成計算器</h2>
+    <button class="mode-toggle" onclick="toggleTheme()">🌙</button>
 
-    <label>平台抽成百分比（%）</label>
+    <h2>Smart Seller Pricing</h2>
+
+    <label for="feeRate">平台抽成百分比（%）</label>
     <input type="number" id="feeRate" value="8" min="0" max="100">
 
-    <label>期望賣家實拿金額（元）</label>
-    <input type="number" id="netAmount" placeholder="輸入後自動計算售價">
+    <label for="calcType">我要計算：</label>
+    <select id="calcType" onchange="switchMode()">
+      <option value="netToGross">建議售價（輸入實拿）</option>
+      <option value="grossToNet">實拿金額（輸入售價）</option>
+    </select>
 
-    <label>實際欲設定售價（元）</label>
-    <input type="number" id="grossAmount" placeholder="輸入後自動計算實拿與抽成">
+    <div class="input-block" id="netBlock">
+      <label for="netAmount">請輸入希望實拿金額（元）：</label>
+      <input type="number" id="netAmount" placeholder="例如 200">
+    </div>
+
+    <div class="input-block" id="grossBlock">
+      <label for="grossAmount">請輸入你設定的售價（元）：</label>
+      <input type="number" id="grossAmount" placeholder="例如 250">
+    </div>
 
     <button onclick="calculate()">開始計算</button>
 
     <div class="result" id="result"></div>
   </div>
 
-  <div class="footer">© 2025 計算工具 by Ethan</div>
+  <div class="footer">© 2025 Smart Seller Pricing</div>
 
   <script>
+    function switchMode() {
+      const mode = document.getElementById("calcType").value;
+      document.getElementById("netBlock").classList.remove("visible");
+      document.getElementById("grossBlock").classList.remove("visible");
+
+      if (mode === "netToGross") {
+        document.getElementById("netBlock").classList.add("visible");
+      } else {
+        document.getElementById("grossBlock").classList.add("visible");
+      }
+
+      document.getElementById("result").innerHTML = ""; // 清空結果
+    }
+
     function calculate() {
       const feeRate = parseFloat(document.getElementById("feeRate").value);
-      const netAmount = parseFloat(document.getElementById("netAmount").value);
-      const grossAmount = parseFloat(document.getElementById("grossAmount").value);
+      const mode = document.getElementById("calcType").value;
       const resultDiv = document.getElementById("result");
 
       if (isNaN(feeRate) || feeRate < 0 || feeRate >= 100) {
@@ -139,34 +194,60 @@
 
       const rate = 1 - (feeRate / 100);
 
-      if (!isNaN(netAmount)) {
-        const calcGross = Math.ceil(netAmount / rate);
-        const calcNet = (calcGross * rate).toFixed(2);
-        const calcFee = (calcGross - calcNet).toFixed(2);
-
+      if (mode === "netToGross") {
+        const netAmount = parseFloat(document.getElementById("netAmount").value);
+        if (isNaN(netAmount)) {
+          resultDiv.innerHTML = "<strong style='color:red;'>請輸入期望實拿金額</strong>";
+          return;
+        }
+        const gross = Math.ceil(netAmount / rate);
+        const calcNet = (gross * rate).toFixed(2);
+        const fee = (gross - calcNet).toFixed(2);
         resultDiv.innerHTML = `
-          <p>🧮 根據期望實拿 <strong>${netAmount}</strong> 元：</p>
-          <p>💰 建議售價：<strong>${calcGross}</strong> 元</p>
+          <p>💰 建議售價：<strong>${gross}</strong> 元</p>
           <p>📦 實拿金額：約 <strong>${calcNet}</strong> 元</p>
-          <p>🏦 平台抽成：約 <strong>${calcFee}</strong> 元</p>
-        `;
-      } else if (!isNaN(grossAmount)) {
-        const calcNet = (grossAmount * rate).toFixed(2);
-        const calcFee = (grossAmount - calcNet).toFixed(2);
-
-        resultDiv.innerHTML = `
-          <p>🧮 根據設定售價 <strong>${grossAmount}</strong> 元：</p>
-          <p>📦 賣家實拿：約 <strong>${calcNet}</strong> 元</p>
-          <p>🏦 平台抽成：約 <strong>${calcFee}</strong> 元</p>
+          <p>🏦 平台抽成：約 <strong>${fee}</strong> 元</p>
         `;
       } else {
-        resultDiv.innerHTML = "<strong style='color:red;'>請輸入實拿金額或售價</strong>";
+        const grossAmount = parseFloat(document.getElementById("grossAmount").value);
+        if (isNaN(grossAmount)) {
+          resultDiv.innerHTML = "<strong style='color:red;'>請輸入售價</strong>";
+          return;
+        }
+        const calcNet = (grossAmount * rate).toFixed(2);
+        const fee = (grossAmount - calcNet).toFixed(2);
+        resultDiv.innerHTML = `
+          <p>📦 賣家實拿：約 <strong>${calcNet}</strong> 元</p>
+          <p>🏦 平台抽成：約 <strong>${fee}</strong> 元</p>
+        `;
       }
     }
 
     function toggleTheme() {
-      document.body.classList.toggle("dark");
+      const body = document.body;
+      const button = document.querySelector('.mode-toggle');
+      
+      body.classList.toggle("dark");
+      
+      // 更新按鈕圖示
+      if (body.classList.contains("dark")) {
+        button.innerHTML = "☀️";
+        button.title = "切換到淺色模式";
+      } else {
+        button.innerHTML = "🌙";
+        button.title = "切換到深色模式";
+      }
     }
+
+    // 預設顯示第一種輸入模式
+    window.onload = function() {
+      switchMode();
+      
+      // 初始化主題切換按鈕
+      const button = document.querySelector('.mode-toggle');
+      button.innerHTML = "🌙";
+      button.title = "切換到深色模式";
+    };
   </script>
 </body>
 </html>
